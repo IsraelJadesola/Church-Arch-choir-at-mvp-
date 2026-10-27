@@ -35,6 +35,19 @@ export default function Members() {
       alert(`Error updating role: ${err.message}`);
     }
   };
+  const handleDeleteMember = async (memberId) => {
+      if (!window.confirm("Are you sure you want to delete this member?")) return;
+
+      try {
+        await api(`/users/${memberId}`, {
+          method: 'DELETE'
+        });
+        // Remove the deleted member from the table UI immediately
+        setMembers(members.filter(m => m.id !== memberId));
+      } catch (err) {
+        alert(`Error deleting member: ${err.message}`);
+      }
+    };
 
   const filteredMembers = filterPart === 'All' 
     ? members 
@@ -97,14 +110,25 @@ export default function Members() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     {user.role === 'director' && member.role !== 'director' ? (
-                      <select 
-                        value={member.role}
-                        onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                        className="text-xs border border-gray-300 rounded p-1 focus:ring-blue-500"
-                      >
-                        <option value="member">Make Member</option>
-                        <option value="leader">Make Exco</option>
-                      </select>
+                      <div className="flex items-center justify-end gap-3">
+                        <select 
+                          value={member.role}
+                          onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                          className="text-xs border border-gray-300 rounded p-1 focus:ring-blue-500"
+                        >
+                          <option value="member">Make Member</option>
+                          <option value="leader">Make Exco</option>
+                        </select>
+
+                        {member.role === 'member' && (
+                          <button
+                            onClick={() => handleDeleteMember(member.id)}
+                            className="text-red-500 hover:text-red-700 text-xs font-bold"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-gray-400 italic text-xs">Locked</span>
                     )}
