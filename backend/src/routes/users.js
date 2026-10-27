@@ -2,6 +2,7 @@ import express from 'express';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { z } from 'zod';
+import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
