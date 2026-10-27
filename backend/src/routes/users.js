@@ -2,7 +2,6 @@ import express from 'express';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { z } from 'zod';
-import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -19,17 +18,8 @@ router.get('/', requireAuth, requireRole('director', 'leader'), async (req, res)
     }
 });
 
-// PATCH /api/users/:id/role - Only Directors can change roles
-const roleSchema = z.object({
-    role: z.enum(['member', 'leader', 'director'])
-});
-
-router.delete('/:id', authMiddleware, async (req, res) => {
-  // Verify the person making the request is a director
-  if (req.user.role !== 'director') {
-    return res.status(403).json({ message: 'Only directors can delete accounts.' });
-  }
-
+// DELETE /api/users/:id - Only Directors can delete standard members
+router.delete('/:id', requireAuth, requireRole('director'), async (req, res) => {
   const targetUserId = req.params.id;
 
   try {
@@ -40,6 +30,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
+    // Block deletion if the target is an Exco (leader) or Director
     if (targetUser.rows[0].role !== 'member') {
       return res.status(403).json({ message: 'You can only delete standard member accounts.' });
     }
@@ -50,6 +41,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
+});
+
+// PATCH /api/users/:id/role - Only Directors can change roles
+const roleSchema = z.object({
+    role: z.enum(['member', 'leader', 'director'])
 });
 
 router.patch('/:id/role', requireAuth, requireRole('director'), async (req, res) => {
