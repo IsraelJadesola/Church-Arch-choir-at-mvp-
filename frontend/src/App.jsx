@@ -13,6 +13,7 @@ import Exco from './pages/Exco';
 import MemberDashboard from './pages/MemberDashboard';
 import Reports from './pages/Reports';
 import ServicePlanner from './pages/ServicePlanner';
+import Settings from './pages/Settings';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -45,6 +46,9 @@ export default function App() {
             <Route path="/songs" element={<Songs />} />
             <Route path="/announcements" element={<Announcements />} />
             
+            {/* Added Settings here so all roles can manage their profiles */}
+            <Route path="/settings" element={<Settings />} />
+            
             {/* DIRECTOR ROUTES */}
             {user.role === 'director' && (
               <>
@@ -53,7 +57,6 @@ export default function App() {
                 <Route path="/members" element={<Members />} />
                 <Route path="/planner" element={<ServicePlanner/>} />                
                 <Route path="/reports" element={<Reports />} />                
-                <Route path="/settings" element={<div className="p-8 text-center text-xl font-bold text-gray-700">Settings (Coming Soon)</div>} />
                 <Route path="/member-dashboard" element={<MemberDashboard />} />
               </>
             )}
