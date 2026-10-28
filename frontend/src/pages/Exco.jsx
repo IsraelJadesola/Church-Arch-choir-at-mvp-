@@ -62,12 +62,12 @@ export default function Exco() {
             <Link to="/members" className="block w-full text-left px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
               👥 View Complete Choir Roster
             </Link>
-            <button className="w-full text-left px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-              📢 Post Global Announcement (Soon)
-            </button>
-            <button className="w-full text-left px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
+            <Link to="/announcements" className="block w-full text-left px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
+              📢 Post Global Announcement
+            </Link>
+            <Link to="/songs" className="block w-full text-left px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
               🎵 Review Full Repertoire Library
-            </button>
+            </Link>
           </div>
         </div>
       </div>
