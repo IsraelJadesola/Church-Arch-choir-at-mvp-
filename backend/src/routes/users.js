@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcrypt';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { z } from 'zod';
@@ -62,6 +63,44 @@ router.patch('/:id/role', requireAuth, requireRole('director'), async (req, res)
         console.error('Error updating role:', err);
         res.status(500).json({ error: 'Server error updating role' });
     }
+});
+
+// PUT /api/users/profile - Update personal info
+router.put('/profile', requireAuth, async (req, res) => {
+  const { name, email } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email',
+      [name, email, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Server error updating profile' });
+  }
+});
+
+// PUT /api/users/password - Update password
+router.put('/password', requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  try {
+    // Fetch the user's current hashed password
+    const userResult = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    if (userResult.rows.length === 0) return res.status(404).json({ message: 'User not found' });
+
+    // Verify current password matches
+    const isValid = await bcrypt.compare(currentPassword, userResult.rows[0].password_hash);
+    if (!isValid) return res.status(400).json({ message: 'Invalid current password' });
+
+    // Hash the new password and save it
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedNewPassword, req.user.id]);
+    
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ message: 'Server error updating password' });
+  }
 });
 
 export default router;
