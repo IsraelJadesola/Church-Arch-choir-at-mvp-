@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
 
 export default function Settings() {
   const { user } = useAuth();
   
-  // Form States
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -16,37 +16,45 @@ export default function Settings() {
     confirm: '',
   });
 
-  const [notifications, setNotifications] = useState({
-    emailReminders: true,
-    smsAlerts: false,
-    repertoireUpdates: true,
-  });
-
   const [isSaving, setIsSaving] = useState(false);
 
-  // Handlers
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    // TODO: Wire up to PUT /api/users/profile
-    setTimeout(() => {
-      alert('Profile updated successfully (Mock)');
+    try {
+      await api('/users/profile', {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+      });
+      alert('Profile updated successfully.');
+    } catch (error) {
+      alert(error.message || 'Failed to update profile.');
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (passwords.new !== passwords.confirm) {
-      return alert("New passwords do not match");
+      return alert("New passwords do not match.");
     }
     setIsSaving(true);
-    // TODO: Wire up to PUT /api/users/password
-    setTimeout(() => {
-      alert('Password changed successfully (Mock)');
+    try {
+      await api('/users/password', {
+        method: 'PUT',
+        body: JSON.stringify({
+          currentPassword: passwords.current,
+          newPassword: passwords.new,
+        }),
+      });
+      alert('Password changed successfully.');
       setPasswords({ current: '', new: '', confirm: '' });
+    } catch (error) {
+      alert(error.message || 'Failed to update password.');
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -71,6 +79,7 @@ export default function Settings() {
                   value={profileData.name}
                   onChange={(e) => setProfileData({...profileData, name: e.target.value})}
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
                 />
               </div>
               <div>
@@ -80,6 +89,7 @@ export default function Settings() {
                   value={profileData.email}
                   onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
                 />
               </div>
               <div>
@@ -117,6 +127,7 @@ export default function Settings() {
                   value={passwords.current}
                   onChange={(e) => setPasswords({...passwords, current: e.target.value})}
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
                 />
               </div>
               <div>
@@ -126,6 +137,7 @@ export default function Settings() {
                   value={passwords.new}
                   onChange={(e) => setPasswords({...passwords, new: e.target.value})}
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
                 />
               </div>
               <div>
@@ -135,6 +147,7 @@ export default function Settings() {
                   value={passwords.confirm}
                   onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
                 />
               </div>
               <button 
@@ -142,7 +155,7 @@ export default function Settings() {
                 disabled={isSaving}
                 className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-50 transition-colors"
               >
-                Update Password
+                {isSaving ? 'Updating...' : 'Update Password'}
               </button>
             </form>
           </div>
