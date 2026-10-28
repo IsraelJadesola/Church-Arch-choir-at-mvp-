@@ -8,6 +8,7 @@ export default function Members() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterPart, setFilterPart] = useState('All');
+  const [processingId, setProcessingId] = useState(null);
 
   useEffect(() => {
     fetchMembers();
@@ -35,6 +36,7 @@ export default function Members() {
       alert(`Error updating role: ${err.message}`);
     }
   };
+
   const handleDeleteMember = async (memberId) => {
       if (!window.confirm("Are you sure you want to delete this member?")) return;
 
@@ -49,9 +51,27 @@ export default function Members() {
       }
     };
 
-  const filteredMembers = filterPart === 'All' 
-    ? members 
-    : members.filter(m => m.voice_part === filterPart);
+  const handleApprove = async (id) => {
+    setProcessingId(id);
+    try {
+      await api(`/users/${id}/approve`, { method: 'PATCH' });
+      // Move the user from pending to active immediately
+      setMembers(members.map(m => m.id === id ? { ...m, active: true } : m));
+    } catch (err) {
+      alert(err.message || 'Failed to approve user');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Separate members by active status
+  const pendingMembers = members.filter(m => !m.active);
+  const activeMembers = members.filter(m => m.active);
+
+  // Apply voice part filter ONLY to active members
+  const filteredActiveMembers = filterPart === 'All' 
+    ? activeMembers 
+    : activeMembers.filter(m => m.voice_part === filterPart);
 
   if (loading) return <div className="p-4 text-center text-gray-500">Loading directory...</div>;
   if (error) return <div className="p-4 text-red-500 text-center">Error: {error}</div>;
@@ -61,7 +81,7 @@ export default function Members() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Choir Directory</h1>
-          <p className="text-sm text-gray-500 mt-1">Total members: {filteredMembers.length}</p>
+          <p className="text-sm text-gray-500 mt-1">Total active members: {filteredActiveMembers.length}</p>
         </div>
         
         <select 
@@ -77,6 +97,36 @@ export default function Members() {
         </select>
       </div>
 
+      {/* Director Only: Pending Approvals Section */}
+      {user?.role === 'director' && pendingMembers.length > 0 && (
+        <div className="mb-8 bg-yellow-50 border border-yellow-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-yellow-200 bg-yellow-100/50 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-yellow-800">Pending Approvals</h2>
+            <span className="px-2.5 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs font-bold">
+              {pendingMembers.length} Awaiting
+            </span>
+          </div>
+          <div className="divide-y divide-yellow-100">
+            {pendingMembers.map(member => (
+              <div key={member.id} className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <p className="font-medium text-gray-900">{member.name}</p>
+                  <p className="text-sm text-gray-500">{member.email} • <span className="font-medium text-gray-700">{member.voice_part}</span></p>
+                </div>
+                <button
+                  onClick={() => handleApprove(member.id)}
+                  disabled={processingId === member.id}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {processingId === member.id ? 'Approving...' : 'Approve Member'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Active Directory Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -90,7 +140,7 @@ export default function Members() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredMembers.map(member => (
+              {filteredActiveMembers.map(member => (
                 <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{member.name}</td>
                   <td className="px-6 py-4 text-gray-500">{member.email}</td>
@@ -135,10 +185,10 @@ export default function Members() {
                   </td>
                 </tr>
               ))}
-              {filteredMembers.length === 0 && (
+              {filteredActiveMembers.length === 0 && (
                 <tr>
                   <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                    No members found in this section.
+                    No active members found in this section.
                   </td>
                 </tr>
               )}
