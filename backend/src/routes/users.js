@@ -65,6 +65,21 @@ router.patch('/:id/role', requireAuth, requireRole('director'), async (req, res)
     }
 });
 
+// PATCH /api/users/:id/approve - Only Directors can approve new accounts
+router.patch('/:id/approve', requireAuth, requireRole('director'), async (req, res) => {
+    try {
+        const result = await pool.query(
+            'UPDATE users SET active = true WHERE id = $1 RETURNING id, name, active',
+            [req.params.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+        res.json({ message: 'User approved successfully', user: result.rows[0] });
+    } catch (err) {
+        console.error('Error approving user:', err);
+        res.status(500).json({ error: 'Server error approving user' });
+    }
+});
+
 // PUT /api/users/profile - Update personal info
 router.put('/profile', requireAuth, async (req, res) => {
   const { name, email } = req.body;
