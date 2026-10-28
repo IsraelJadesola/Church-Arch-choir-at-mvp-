@@ -24,9 +24,9 @@ export function AuthProvider({ children }) {
   // Route users to their specific dashboards based on role
   const routeUser = (role) => {
     if (role === 'director') {
-      navigate('/');
-    } else if (role === 'executive' || role === 'leader') {
-      navigate('/executive');
+      navigate('/director');
+    } else if (role === 'leader') {
+      navigate('/exco'); 
     } else {
       navigate('/member-dashboard');
     }
@@ -43,13 +43,13 @@ export function AuthProvider({ children }) {
     handleAuth(data);
   };
 
-  // Accepts the 'role' parameter from the signup form
-  const register = async (name, email, password, voicePart, role) => {
-    const data = await api('/auth/register', {
+  // Updated register function: No role parameter, no auto-login
+  const register = async (name, email, password, voicePart) => {
+    await api('/auth/register', {
       method: 'POST',
-      body: { name, email, password, voicePart, role },
+      body: { name, email, password, voicePart },
     });
-    handleAuth(data);
+    // We do NOT call handleAuth() here because the user is pending approval and receives no token
   };
 
   const logout = () => {

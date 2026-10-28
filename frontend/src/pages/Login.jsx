@@ -12,7 +12,6 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [voicePart, setVoicePart] = useState('Soprano');
-  const [role, setRole] = useState('member'); // NEW: Role state
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,8 +22,14 @@ export default function Login() {
       if (isLogin) {
         await login(email, password);
       } else {
-        // Pass the role parameter to the updated register function
-        await register(name, email, password, voicePart, role);
+        // Send registration without the role parameter
+        await register(name, email, password, voicePart);
+        
+        alert('Registration successful! Please wait for the Director to approve your account.');
+        
+        // Reset to login screen and clear password
+        setIsLogin(true);
+        setPassword('');
       }
     } catch (err) {
       setError(err.message || 'Something went wrong');
@@ -62,23 +67,14 @@ export default function Login() {
           </div>
 
           {!isLogin && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Voice Part</label>
-                <select value={voicePart} onChange={e => setVoicePart(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                  <option value="Soprano">Soprano</option>
-                  <option value="Alto">Alto</option>
-                  <option value="Tenor">Tenor</option>
-                  <option value="Bass">Bass</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Account Role</label>
-                <select value={role} onChange={e => setRole(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                  <option value="member">Member</option>
-                  <option value="leader">Exco (Leader)</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Voice Part</label>
+              <select value={voicePart} onChange={e => setVoicePart(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <option value="Soprano">Soprano</option>
+                <option value="Alto">Alto</option>
+                <option value="Tenor">Tenor</option>
+                <option value="Bass">Bass</option>
+              </select>
             </div>
           )}
 
