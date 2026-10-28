@@ -55,6 +55,7 @@ export default function Navbar() {
                 <Link to="/songs" className="hover:text-blue-200 font-medium">Songs</Link>
                 <Link to="/members" className="hover:text-blue-200 font-medium">Directory</Link>
                 <Link to="/announcements" className="hover:text-blue-200 font-medium">Notices</Link>
+                <Link to="/settings" className="text-sm font-medium hover:text-gray-300">Settings</Link>
               </>
             )}
             {user.role === 'leader' && (
