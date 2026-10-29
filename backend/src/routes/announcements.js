@@ -47,7 +47,7 @@ router.put('/:id', requireAuth, async (req, res) => {
         const check = await pool.query('SELECT * FROM announcements WHERE id = $1', [req.params.id]);
         if (check.rows.length === 0) return res.status(404).json({ error: 'Announcement not found' });
         
-        // Strict ownership check
+        // Strict ownership check (Directors cannot edit other people's posts, only delete them)
         if (req.user.name !== check.rows[0].author_name) {
             return res.status(403).json({ error: 'You can only edit your own announcements' });
         }
@@ -71,9 +71,9 @@ router.delete('/:id', requireAuth, async (req, res) => {
         const check = await pool.query('SELECT * FROM announcements WHERE id = $1', [req.params.id]);
         if (check.rows.length === 0) return res.status(404).json({ error: 'Announcement not found' });
         
-        // Strict ownership check
-        if (req.user.name !== check.rows[0].author_name) {
-            return res.status(403).json({ error: 'You can only delete your own announcements' });
+        // Ownership check OR Director override
+        if (req.user.name !== check.rows[0].author_name && req.user.role !== 'director') {
+            return res.status(403).json({ error: 'You are not authorized to delete this announcement' });
         }
 
         await pool.query('DELETE FROM announcements WHERE id = $1', [req.params.id]);

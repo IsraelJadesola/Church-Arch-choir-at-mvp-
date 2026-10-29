@@ -126,17 +126,19 @@ export default function Announcements() {
                   <h3 className="text-lg font-bold text-gray-900">{notice.title}</h3>
                 </div>
                 
-                {/* STRICT OWNERSHIP CHECK FOR BUTTONS */}
-                {user?.name === notice.author_name && (
-                  <div>
-                    <button onClick={() => handleEdit(notice)} className="text-blue-500 hover:text-blue-700 text-sm font-medium mr-4">
+                {/* OWNERSHIP OR DIRECTOR OVERRIDE CHECK */}
+                <div className="flex gap-4">
+                  {user?.name === notice.author_name && (
+                    <button onClick={() => handleEdit(notice)} className="text-blue-500 hover:text-blue-700 text-sm font-medium">
                       Edit
                     </button>
+                  )}
+                  {(user?.name === notice.author_name || user?.role === 'director') && (
                     <button onClick={() => handleDelete(notice.id)} className="text-red-500 hover:text-red-700 text-sm font-medium">
                       Delete
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               <p className="text-gray-700 whitespace-pre-wrap">{notice.content}</p>
               <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
