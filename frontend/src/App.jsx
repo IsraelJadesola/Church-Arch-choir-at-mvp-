@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import DirectorSidebar from './components/DirectorSidebar';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword'; // <-- Imported here
 import Events from './pages/Events';
 import Songs from './pages/Songs';
 import Members from './pages/Members';
@@ -22,9 +23,11 @@ export default function App() {
     return <div className="flex h-screen items-center justify-center text-gray-500 font-medium">Loading Choir App...</div>;
   }
 
+  // Unauthenticated users can access Login OR Reset Password
   if (!user) {
     return (
       <Routes>
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="*" element={<Login />} />
       </Routes>
     );

@@ -4,8 +4,19 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../db.js';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 const router = express.Router();
+
+// Email Transporter Setup
+const transporter = nodemailer.createTransport({
+    service: 'gmail', 
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 // 1. Removed 'role' from schema so frontend cannot dictate user rank
 const registerSchema = z.object({
@@ -120,6 +131,72 @@ router.get('/me', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Auth check error:', err);
         res.status(500).json({ error: 'Server error checking auth status' });
+    }
+});
+
+// POST /auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (user.rows.length === 0) {
+            return res.status(404).json({ error: 'No account with that email exists' });
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = await bcrypt.hash(resetToken, 10);
+        const expireDate = new Date(Date.now() + 3600000); // 1 hour from now
+
+        await pool.query(
+            'UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3',
+            [tokenHash, expireDate, email]
+        );
+
+        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}?email=${email}`;
+
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Choir App - Password Reset Request',
+            html: `<p>You requested a password reset.</p>
+                   <p>Click this <a href="${resetUrl}">link to reset your password</a>.</p>
+                   <p>If you did not request this, please ignore this email.</p>`
+        });
+
+        res.json({ message: 'Password reset link sent to your email' });
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        res.status(500).json({ error: 'Error sending reset email' });
+    }
+});
+
+// POST /auth/reset-password
+router.post('/reset-password', async (req, res) => {
+    const { email, token, newPassword } = req.body;
+    try {
+        const user = await pool.query(
+            'SELECT * FROM users WHERE email = $1 AND reset_token_expires > NOW()',
+            [email]
+        );
+
+        if (user.rows.length === 0) {
+            return res.status(400).json({ error: 'Token is invalid or has expired' });
+        }
+
+        const isValid = await bcrypt.compare(token, user.rows[0].reset_token);
+        if (!isValid) return res.status(400).json({ error: 'Invalid token' });
+
+        const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+        await pool.query(
+            'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE email = $2',
+            [newPasswordHash, email]
+        );
+
+        res.json({ message: 'Password reset successfully' });
+    } catch (err) {
+        console.error('Reset password error:', err);
+        res.status(500).json({ error: 'Error resetting password' });
     }
 });
 

@@ -1,94 +1,126 @@
-import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import express from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { pool } from '../db.js';
+import { z } from 'zod';
+import { requireAuth } from '../middleware/auth.js';
 
-export default function Login() {
-  const { login, register } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+const router = express.Router();
 
-  // Form state
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [voicePart, setVoicePart] = useState('Soprano');
+// 1. Removed 'role' from schema so frontend cannot dictate user rank
+const registerSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    voicePart: z.enum(['Soprano', 'Alto', 'Tenor', 'Bass'])
+});
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
+router.post('/register', async (req, res) => {
     try {
-      if (isLogin) {
-        await login(email, password);
-      } else {
-        // Send registration without the role parameter
-        await register(name, email, password, voicePart);
+        const data = registerSchema.parse(req.body);
         
-        alert('Registration successful! Please wait for the Director to approve your account.');
-        
-        // Reset to login screen and clear password
-        setIsLogin(true);
-        setPassword('');
-      }
+        const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [data.email]);
+        if (userExists.rows.length > 0) {
+            return res.status(400).json({ error: 'User already exists' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(data.password, salt);
+
+        // 2. Hardcode role as 'member' and active as false
+        await pool.query(
+            `INSERT INTO users (name, email, password_hash, role, voice_part, active) 
+             VALUES ($1, $2, $3, 'member', $4, false)`,
+            [data.name, data.email, password_hash, data.voicePart]
+        );
+
+        // 3. Do NOT send a token back. Force them to wait for approval.
+        res.status(201).json({ 
+            message: 'Registration successful! Please wait for the Director to approve your account.' 
+        });
     } catch (err) {
-      setError(err.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
+        if (err instanceof z.ZodError) {
+            return res.status(400).json({ error: err.errors[0].message });
+        }
+        console.error('Registration error:', err);
+        res.status(500).json({ error: 'Server error during registration' });
     }
-  };
+});
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Choir App</h1>
-          <p className="text-gray-500">{isLogin ? 'Log in to your account' : 'Create a new account'}</p>
-        </div>
+const loginSchema = z.object({
+    email: z.string().email("Invalid email"),
+    password: z.string().min(1, "Password is required")
+});
 
-        {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6">{error}</div>}
+router.post('/login', async (req, res) => {
+    try {
+        const data = loginSchema.parse(req.body);
+        
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [data.email]);
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
-            </div>
-          )}
+        const dbUser = result.rows[0];
+        const validPassword = await bcrypt.compare(data.password, dbUser.password_hash);
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
-          </div>
+        // 4. Update rejection message for inactive accounts
+        if (!dbUser.active) {
+            return res.status(403).json({ error: 'Your account is pending Director approval.' });
+        }
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
-          </div>
+        const user = {
+            id: dbUser.id,
+            name: dbUser.name,
+            email: dbUser.email,
+            role: dbUser.role,
+            voicePart: dbUser.voice_part,
+            active: dbUser.active
+        };
 
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Voice Part</label>
-              <select value={voicePart} onChange={e => setVoicePart(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                <option value="Soprano">Soprano</option>
-                <option value="Alto">Alto</option>
-                <option value="Tenor">Tenor</option>
-                <option value="Bass">Bass</option>
-              </select>
-            </div>
-          )}
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        
+        res.json({ user, token });
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            return res.status(400).json({ error: err.errors[0].message });
+        }
+        console.error('Login error:', err);
+        res.status(500).json({ error: 'Server error during login' });
+    }
+});
 
-          <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 mt-4">
-            {loading ? 'Please wait...' : (isLogin ? 'Log In' : 'Sign Up')}
-          </button>
-        </form>
+router.get('/me', requireAuth, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const dbUser = result.rows[0];
 
-        <div className="mt-6 text-center">
-          <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-blue-600 hover:underline text-sm font-medium">
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+        // 5. Extra security: Boot them if they somehow stored an old token but were deactivated
+        if (!dbUser.active) {
+            return res.status(403).json({ error: 'Your account is pending Director approval.' });
+        }
+
+        const user = {
+            id: dbUser.id,
+            name: dbUser.name,
+            email: dbUser.email,
+            role: dbUser.role,
+            voicePart: dbUser.voice_part,
+            active: dbUser.active
+        };
+
+        res.json({ user });
+    } catch (err) {
+        console.error('Auth check error:', err);
+        res.status(500).json({ error: 'Server error checking auth status' });
+    }
+});
+
+export default router;
