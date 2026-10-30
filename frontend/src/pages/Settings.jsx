@@ -96,7 +96,7 @@ export default function Settings() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Voice Part</label>
                 <input 
                   type="text" 
-                  value={user?.voice_part || 'Unassigned'}
+                  value={user?.voicePart || 'Unassigned'}
                   disabled
                   className="w-full p-2.5 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-500 cursor-not-allowed"
                 />
