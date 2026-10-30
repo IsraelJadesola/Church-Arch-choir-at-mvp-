@@ -38,27 +38,35 @@ export default function Members() {
   };
 
   const handleDeleteMember = async (memberId) => {
-      if (!window.confirm("Are you sure you want to delete this member?")) return;
-
-      try {
-        await api(`/users/${memberId}`, {
-          method: 'DELETE'
-        });
-        // Remove the deleted member from the table UI immediately
-        setMembers(members.filter(m => m.id !== memberId));
-      } catch (err) {
-        alert(`Error deleting member: ${err.message}`);
-      }
-    };
+    if (!window.confirm("Are you sure you want to delete this member?")) return;
+    try {
+      await api(`/users/${memberId}`, { method: 'DELETE' });
+      setMembers(members.filter(m => m.id !== memberId));
+    } catch (err) {
+      alert(`Error deleting member: ${err.message}`);
+    }
+  };
 
   const handleApprove = async (id) => {
     setProcessingId(id);
     try {
       await api(`/users/${id}/approve`, { method: 'PATCH' });
-      // Move the user from pending to active immediately
       setMembers(members.map(m => m.id === id ? { ...m, active: true } : m));
     } catch (err) {
       alert(err.message || 'Failed to approve user');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDecline = async (id) => {
+    if (!window.confirm("Are you sure you want to decline and permanently delete this registration request?")) return;
+    setProcessingId(id);
+    try {
+      await api(`/users/${id}`, { method: 'DELETE' });
+      setMembers(members.filter(m => m.id !== id));
+    } catch (err) {
+      alert(`Error declining request: ${err.message}`);
     } finally {
       setProcessingId(null);
     }
@@ -113,13 +121,22 @@ export default function Members() {
                   <p className="font-medium text-gray-900">{member.name}</p>
                   <p className="text-sm text-gray-500">{member.email} • <span className="font-medium text-gray-700">{member.voice_part}</span></p>
                 </div>
-                <button
-                  onClick={() => handleApprove(member.id)}
-                  disabled={processingId === member.id}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
-                >
-                  {processingId === member.id ? 'Approving...' : 'Approve Member'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleDecline(member.id)}
+                    disabled={processingId === member.id}
+                    className="bg-white border border-red-200 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    onClick={() => handleApprove(member.id)}
+                    disabled={processingId === member.id}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {processingId === member.id ? 'Processing...' : 'Approve'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
