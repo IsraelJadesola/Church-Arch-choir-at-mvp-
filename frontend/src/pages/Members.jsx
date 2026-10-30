@@ -37,6 +37,19 @@ export default function Members() {
     }
   };
 
+  // NEW: Handle Voice Part Change
+  const handleVoicePartChange = async (memberId, newPart) => {
+    try {
+      await api(`/users/${memberId}/voice-part`, {
+        method: 'PATCH',
+        body: { voicePart: newPart }
+      });
+      setMembers(members.map(m => m.id === memberId ? { ...m, voice_part: newPart } : m));
+    } catch (err) {
+      alert(`Error updating voice part: ${err.message}`);
+    }
+  };
+
   const handleDeleteMember = async (memberId) => {
     if (!window.confirm("Are you sure you want to delete this member?")) return;
     try {
@@ -72,11 +85,9 @@ export default function Members() {
     }
   };
 
-  // Separate members by active status
   const pendingMembers = members.filter(m => !m.active);
   const activeMembers = members.filter(m => m.active);
 
-  // Apply voice part filter ONLY to active members
   const filteredActiveMembers = filterPart === 'All' 
     ? activeMembers 
     : activeMembers.filter(m => m.voice_part === filterPart);
@@ -105,7 +116,6 @@ export default function Members() {
         </select>
       </div>
 
-      {/* Director Only: Pending Approvals Section */}
       {user?.role === 'director' && pendingMembers.length > 0 && (
         <div className="mb-8 bg-yellow-50 border border-yellow-200 rounded-xl overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-yellow-200 bg-yellow-100/50 flex items-center justify-between">
@@ -143,7 +153,6 @@ export default function Members() {
         </div>
       )}
 
-      {/* Active Directory Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -161,11 +170,28 @@ export default function Members() {
                 <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{member.name}</td>
                   <td className="px-6 py-4 text-gray-500">{member.email}</td>
+                  
+                  {/* UPDATED: Voice Part Dropdown for Directors */}
                   <td className="px-6 py-4">
-                    <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                      {member.voice_part}
-                    </span>
+                    {user.role === 'director' ? (
+                      <select 
+                        value={member.voice_part || 'Unassigned'}
+                        onChange={(e) => handleVoicePartChange(member.id, e.target.value)}
+                        className="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer"
+                      >
+                        <option value="Soprano">Soprano</option>
+                        <option value="Alto">Alto</option>
+                        <option value="Tenor">Tenor</option>
+                        <option value="Bass">Bass</option>
+                        <option value="Unassigned">Unassigned</option>
+                      </select>
+                    ) : (
+                      <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                        {member.voice_part || 'Unassigned'}
+                      </span>
+                    )}
                   </td>
+
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${
                       member.role === 'director' ? 'bg-purple-100 text-purple-800' :

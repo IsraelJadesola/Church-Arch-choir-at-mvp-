@@ -65,6 +65,24 @@ router.patch('/:id/role', requireAuth, requireRole('director'), async (req, res)
     }
 });
 
+// PATCH /api/users/:id/voice-part - Only Directors can change voice parts
+router.patch('/:id/voice-part', requireAuth, requireRole('director'), async (req, res) => {
+    const { voicePart } = req.body;
+    try {
+        const result = await pool.query(
+            'UPDATE users SET voice_part = $1 WHERE id = $2 RETURNING *',
+            [voicePart, req.params.id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error updating voice part' });
+    }
+});
+
 // PATCH /api/users/:id/approve - Only Directors can approve new accounts
 router.patch('/:id/approve', requireAuth, requireRole('director'), async (req, res) => {
     try {
