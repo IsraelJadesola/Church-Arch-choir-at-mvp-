@@ -32,6 +32,7 @@ export default function DirectorSidebar() {
     { name: 'Repertoire Library', path: '/songs' },
     { name: 'Master Schedule', path: '/events' },
     { name: 'Announcements', path: '/announcements' },
+    { name: 'System Settings', path: '/settings' },
   ];
 
   const links = user.role === 'director' ? directorLinks : excoLinks;

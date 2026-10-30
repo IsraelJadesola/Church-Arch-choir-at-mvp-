@@ -29,6 +29,7 @@ export default function Navbar() {
                 <Link to="/events" className="hover:text-blue-200">My Schedule</Link>
                 <Link to="/songs" className="hover:text-blue-200">My Tracks</Link>
                 <Link to="/announcements" className="hover:text-blue-200">Announcements</Link>
+                <Link to="/settings" className="hover:text-blue-200">Settings</Link>
               </>
             )}
           </div>
@@ -55,7 +56,7 @@ export default function Navbar() {
                 <Link to="/songs" className="hover:text-blue-200 font-medium">Songs</Link>
                 <Link to="/members" className="hover:text-blue-200 font-medium">Directory</Link>
                 <Link to="/announcements" className="hover:text-blue-200 font-medium">Notices</Link>
-                <Link to="/settings" className="text-sm font-medium hover:text-gray-300">Settings</Link>
+                <Link to="/settings" className="hover:text-blue-200 font-medium">Settings</Link>
               </>
             )}
             {user.role === 'leader' && (
@@ -65,6 +66,7 @@ export default function Navbar() {
                 <Link to="/songs" className="hover:text-blue-200 font-medium">Library</Link>
                 <Link to="/members" className="hover:text-blue-200 font-medium">Roster</Link>
                 <Link to="/announcements" className="hover:text-blue-200 font-medium">Notices</Link>
+                <Link to="/settings" className="hover:text-blue-200 font-medium">Settings</Link>
               </>
             )}
             {user.role === 'member' && (
@@ -73,6 +75,7 @@ export default function Navbar() {
                 <Link to="/events" className="hover:text-blue-200 font-medium">Schedule</Link>
                 <Link to="/songs" className="hover:text-blue-200 font-medium">Tracks</Link>
                 <Link to="/announcements" className="hover:text-blue-200 font-medium">Notices</Link>
+                <Link to="/settings" className="hover:text-blue-200 font-medium">Settings</Link>
               </>
             )}
         </div>
