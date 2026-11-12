@@ -31,9 +31,11 @@ router.get('/rsvps', requireAuth, requireRole('director'), async (req, res) => {
                     not_going: []
                 };
             }
-            if (row.name && row.status === 'going') {
+            // CHANGED: Checking for 'attending' instead of 'going'
+            if (row.name && row.status === 'attending') {
                 eventsMap[row.event_id].going.push({ name: row.name, role: row.role });
-            } else if (row.name && row.status === 'not_going') {
+            // CHANGED: Checking for 'not_attending' instead of 'not_going'
+            } else if (row.name && row.status === 'not_attending') {
                 eventsMap[row.event_id].not_going.push({ name: row.name, role: row.role });
             }
         });
