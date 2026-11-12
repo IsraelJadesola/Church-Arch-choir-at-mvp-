@@ -21,7 +21,7 @@ export default function MemberDashboard() {
         setEvents(Array.isArray(eventsData) ? eventsData : []);
         setSongs(Array.isArray(songsData) ? songsData : []);
         
-        // Convert RSVP array into an easy-to-read lookup object: { event_id: 'Attending' }
+        // Convert RSVP array into an easy-to-read lookup object
         const rsvpMap = {};
         if (Array.isArray(rsvpData)) {
           rsvpData.forEach(r => { rsvpMap[r.event_id] = r.status; });
@@ -81,15 +81,17 @@ export default function MemberDashboard() {
                   
                   <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700 mr-2">RSVP:</span>
+                    {/* CHANGED: Replaced 'Attending' with 'attending' */}
                     <button 
-                      onClick={() => handleRSVP(event.id, 'Attending')}
-                      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${rsvps[event.id] === 'Attending' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-green-100 hover:text-green-800'}`}
+                      onClick={() => handleRSVP(event.id, 'attending')}
+                      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${rsvps[event.id] === 'attending' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-green-100 hover:text-green-800'}`}
                     >
                       Attending
                     </button>
+                    {/* CHANGED: Replaced 'Not Attending' with 'not_attending' */}
                     <button 
-                      onClick={() => handleRSVP(event.id, 'Not Attending')}
-                      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${rsvps[event.id] === 'Not Attending' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-800'}`}
+                      onClick={() => handleRSVP(event.id, 'not_attending')}
+                      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${rsvps[event.id] === 'not_attending' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-800'}`}
                     >
                       Not Attending
                     </button>
@@ -111,6 +113,7 @@ export default function MemberDashboard() {
                 <div key={song.id} className="p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors flex justify-between items-center">
                   <div>
                     <h4 className="font-bold text-gray-800">{song.title}</h4>
+                    {/* FIXED: Added spacing bullet point between category and Key */}
                     <p className="text-xs text-gray-500">{song.category} • Key: {song.key || 'N/A'}</p>
                   </div>
                   {song.file_url ? (
