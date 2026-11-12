@@ -60,17 +60,41 @@ export default function Songs() {
     setUploading(true);
     
     try {
-      const data = new FormData();
-      data.append('title', formData.title);
-      data.append('composer', formData.composer);
-      data.append('key', formData.key);
-      data.append('status', formData.status);
-      data.append('category', formData.category);
-      data.append('notes', formData.notes);
-      
-      if (selectedFile) {
-        data.append('file', selectedFile);
+      // Prevent uploading files larger than 50MB (50 * 1024 * 1024 bytes)
+      if (selectedFile && selectedFile.size > 52428800) {
+        alert("File is too large! Please compress it or upload a file smaller than 50MB.");
+        setUploading(false);
+        return;
       }
+
+      let fileUrl = null;
+      let fileType = null;
+
+      // 1. If a file is selected, upload it DIRECTLY to Cloudinary from the browser
+      if (selectedFile) {
+        const cloudData = new FormData();
+        cloudData.append('file', selectedFile);
+        cloudData.append('upload_preset', 'choir_preset'); 
+
+        // Upload to your specific Cloudinary cloud (lsrvj8cw)
+        const cloudRes = await fetch('https://api.cloudinary.com/v1_1/lsrvj8cw/auto/upload', {
+          method: 'POST',
+          body: cloudData
+        });
+
+        if (!cloudRes.ok) throw new Error('Failed to upload file to Cloudinary');
+        
+        const cloudJson = await cloudRes.json();
+        fileUrl = cloudJson.secure_url;
+        fileType = selectedFile.type; 
+      }
+
+      // 2. Send the song text data + the new Cloudinary URL to your backend
+      const payload = {
+        ...formData,
+        fileUrl: fileUrl,
+        fileType: fileType
+      };
 
       const token = localStorage.getItem('token');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -80,21 +104,15 @@ export default function Songs() {
       const res = await fetch(endpoint, {
         method,
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: data
+        body: JSON.stringify(payload)
       });
-
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const textError = await res.text();
-        console.error("Backend Error Response:", textError);
-        throw new Error("Server crashed. Check backend logs.");
-      }
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'Failed to save song');
+        throw new Error(err.error || 'Failed to save song to database');
       }
 
       const savedSong = await res.json();
@@ -181,7 +199,7 @@ export default function Songs() {
 
             <div className="md:col-span-2">
               <button type="submit" disabled={uploading} className="w-full bg-green-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 mt-2 disabled:opacity-50">
-                {uploading ? 'Saving...' : (editingId ? 'Update Song' : 'Save Song to Library')}
+                {uploading ? 'Uploading to Cloudinary...' : (editingId ? 'Update Song' : 'Save Song to Library')}
               </button>
             </div>
           </form>
@@ -255,7 +273,6 @@ export default function Songs() {
         </div>
       </div>
 
-      {/* SONG DETAILS MODAL */}
       {selectedSong && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">

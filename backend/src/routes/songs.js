@@ -2,7 +2,6 @@ import express from 'express';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { z } from 'zod';
-import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -12,7 +11,9 @@ const songSchema = z.object({
     key: z.string().optional(),
     status: z.string().optional(),
     notes: z.string().optional(),
-    category: z.string().default('Uncategorized')
+    category: z.string().default('Uncategorized'),
+    fileUrl: z.string().nullable().optional(),
+    fileType: z.string().nullable().optional()
 });
 
 router.get('/', requireAuth, async (req, res) => {
@@ -25,16 +26,14 @@ router.get('/', requireAuth, async (req, res) => {
     }
 });
 
-router.post('/', requireAuth, requireRole('director'), upload.single('file'), async (req, res) => {
+router.post('/', requireAuth, requireRole('director'), async (req, res) => {
     try {
         const data = songSchema.parse(req.body);
-        const fileUrl = req.file ? req.file.path : null;
-        const fileType = req.file ? req.file.mimetype : null;
 
         const result = await pool.query(
             `INSERT INTO songs (title, composer, key, status, notes, category, file_url, file_type) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [data.title, data.composer, data.key, data.status, data.notes, data.category, fileUrl, fileType]
+            [data.title, data.composer, data.key, data.status, data.notes, data.category, data.fileUrl, data.fileType]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -44,15 +43,15 @@ router.post('/', requireAuth, requireRole('director'), upload.single('file'), as
     }
 });
 
-router.put('/:id', requireAuth, requireRole('director'), upload.single('file'), async (req, res) => {
+router.put('/:id', requireAuth, requireRole('director'), async (req, res) => {
     try {
         const data = songSchema.parse(req.body);
         let result;
 
-        if (req.file) {
+        if (data.fileUrl) {
             result = await pool.query(
                 `UPDATE songs SET title = $1, composer = $2, key = $3, status = $4, notes = $5, category = $6, file_url = $7, file_type = $8 WHERE id = $9 RETURNING *`,
-                [data.title, data.composer, data.key, data.status, data.notes, data.category, req.file.path, req.file.mimetype, req.params.id]
+                [data.title, data.composer, data.key, data.status, data.notes, data.category, data.fileUrl, data.fileType, req.params.id]
             );
         } else {
             result = await pool.query(
