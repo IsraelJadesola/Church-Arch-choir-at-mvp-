@@ -56,7 +56,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {view === 'register' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name - leave if you don't have one </label>
               <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500" />
             </div>
           )}
